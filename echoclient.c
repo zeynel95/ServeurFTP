@@ -43,7 +43,7 @@ int main(int argc, char **argv)
             printf("s");
         buf[i] = 0;
         fprintf(stderr, "\n%s\n", buf);
-        int fd = open(buf,O_WRONLY | O_CREAT);
+        int fd = open(buf, O_WRONLY | O_CREAT, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH);
         perror("");
         fprintf(stderr,"a");
         while ((n = Rio_readnb(&rio, res, MAXLINE)) > 0) {
