@@ -1,6 +1,10 @@
 # Prerequisites
 *.d
 
+echoclient
+echoserveri
+test
+
 # Object files
 *.o
 *.ko
