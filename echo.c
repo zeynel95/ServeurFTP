@@ -12,11 +12,8 @@ void echo(int connfd)
     rio_t rio;
 
     Rio_readinitb(&rio, connfd);
-    fprintf(stderr,"hi");
     n = Rio_readlineb(&rio, buf, MAXLINE);
-    fprintf(stderr,"hi");
     buf[n-1] = 0;
-    fprintf(stderr, "%s", buf);
     printf("server received %u bytes\n", (unsigned int)n);
     int fd = open(buf, O_RDONLY);
     rio_t fileRio;

@@ -36,23 +36,17 @@ int main(int argc, char **argv)
         Fgets(buf, MAXLINE, stdin);
         Rio_writen(clientfd, buf, strlen(buf));
         int i = 0;
-        printf("%s", res);
-        while (buf[i]!='\n'){
-            fprintf(stderr,"s");
-            i++;}        
-            printf("s");
+        while (buf[i]!='\n')
+            i++;
         buf[i] = 0;
-        fprintf(stderr, "\n%s\n", buf);
         int fd = open(buf, O_WRONLY | O_CREAT, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH);
         perror("");
         fprintf(stderr,"a");
         while ((n = Rio_readnb(&rio, res, MAXLINE)) > 0) {
             // Fputs(buf, stdout);
-            fprintf(stderr,"n = %d\n", n);
-            printf("fd : %d\n", fd);
+            fprintf(stderr,"paquet de %d bits recu!!\n", n);
             Rio_writen(fd, res, n);
         }
-            fprintf(stderr,"n = %d\n", n);
     Close(clientfd);
     Close(fd);
     exit(0);
