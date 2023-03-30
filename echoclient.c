@@ -7,6 +7,47 @@
 int file_available(int, rio_t, char*);
 void save_file(char*, rio_t);
 
+
+typedef struct paquet{
+    int declage;
+    char* nomFic;
+} paquet;
+
+paquet* getBeforeConnectInfo(){
+    FILE* f = fopen(".cache","r");
+
+    if(!f)
+        return NULL;
+
+    char *res = malloc(100);
+    fscanf(f, "%s", res);
+    
+    if(!strcmp(res, "succes")){
+        free(res);
+        return NULL;
+    }
+
+    fclose(f);
+    f = fopen(".cache", "r");
+    paquet* p = malloc(sizeof(paquet));
+    p->nomFic = malloc(100);
+    fscanf(f, "%d\n%s", &p->declage, p->nomFic);
+    fclose(f);
+    return p;
+}
+
+// void recupData(paquet* p, rio_t rio, char* res, int clientfd){
+//     Rio_writen(clientfd, p->nomFic, strlen(p->nomFic));
+//     int n;
+//     int fd = open(p->nomFic, O_WRONLY | O_CREAT, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH); 
+//     while ((n = Rio_readnb(&rio, res, MAXLINE)) > 0) {
+//         fprintf(stderr,"reconstitution paquet de %d bits recu!!\n", n);
+//         Rio_writen(fd, res, n);
+//     }
+//     Close(fd);
+
+// }
+
 int main(int argc, char **argv){
     int clientfd, port;
     char *host, buf[MAXLINE];
@@ -34,6 +75,23 @@ int main(int argc, char **argv){
     printf("client connected to server OS\n"); 
     
     Rio_readinitb(&rio, clientfd);
+
+    paquet* p = getBeforeConnectInfo();
+
+    if(p){
+        printf("on reprend lecriture nb : %d et nom : %s\n", p->declage, p->nomFic);
+        p->nomFic[strlen(p->nomFic)] = '\n';
+        if(!file_available(clientfd, rio, p->nomFic)){
+            printf("file doesn't exist: buff: %s.\n", buf);
+        }
+        else{
+            int i = 0;
+            while (p->nomFic[i]!='\n')
+                i++;
+            p->nomFic[i] = 0;
+            save_file(p->nomFic, rio);
+        } 
+    }
     
     // tant que on n'as pas ecrit bye
     int bye = 0;
@@ -97,12 +155,23 @@ void save_file(char* file, rio_t rio){
     
     char *packet[MAXLINE];
     int octs_lis = Rio_readnb(&rio, &packet, packet_size);
-
+    FILE* hiddenFile = NULL;
+    int i=0;
+    printf("im here\n");
     while (octs_lis == MAXLINE) {
+        sleep(1);
+        printf("on lis %d octet\n", octs_lis);
+        i++;
+        hiddenFile = fopen(".cache", "w");
+        fprintf(hiddenFile, "%d\n%s", i, file);
+        fclose(hiddenFile);
         Rio_writen(fd, packet, octs_lis);
         Rio_readnb(&rio, &packet_size, 4);
         octs_lis = Rio_readnb(&rio, &packet, packet_size);
     } 
     Rio_writen(fd, packet, octs_lis);
+    hiddenFile = fopen(".cache", "w");
+    fprintf(hiddenFile, "succes");
+    fclose(hiddenFile);
     Close(fd);
 }
