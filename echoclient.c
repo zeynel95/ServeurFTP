@@ -5,7 +5,7 @@
 #include <string.h>
 
 int file_available(int, rio_t, char*);
-void save_file(char*, rio_t);
+void save_file(char*, rio_t, int);
 
 
 typedef struct paquet{
@@ -77,9 +77,12 @@ int main(int argc, char **argv){
     Rio_readinitb(&rio, clientfd);
 
     paquet* p = getBeforeConnectInfo();
-
+    
+    int decalageLen = 0;
     if(p){
-        printf("on reprend lecriture nb : %d et nom : %s\n", p->declage, p->nomFic);
+        printf("on reprend lecriture du fichier %s\n", p->nomFic);
+        decalageLen = p->declage;
+        Rio_writen(clientfd, &decalageLen, 4);
         p->nomFic[strlen(p->nomFic)] = '\n';
         if(!file_available(clientfd, rio, p->nomFic)){
             printf("file doesn't exist: buff: %s.\n", buf);
@@ -89,9 +92,10 @@ int main(int argc, char **argv){
             while (p->nomFic[i]!='\n')
                 i++;
             p->nomFic[i] = 0;
-            save_file(p->nomFic, rio);
+            save_file(p->nomFic, rio, 1);
         } 
     }
+    else Rio_writen(clientfd, &decalageLen, 4);
     
     // tant que on n'as pas ecrit bye
     int bye = 0;
@@ -118,7 +122,7 @@ int main(int argc, char **argv){
             i++;
         buf[i] = 0;
 
-        save_file(buf, rio);
+        save_file(buf, rio, 0);
     }
 
     Close(clientfd);
@@ -127,6 +131,7 @@ int main(int argc, char **argv){
 
 int file_available(int clientfd, rio_t rio, char* buf){
     // send command to server
+
     Rio_writen(clientfd, buf, strlen(buf));
     int is_OK;
     Rio_readnb(&rio, &is_OK, 4);
@@ -140,14 +145,18 @@ int file_available(int clientfd, rio_t rio, char* buf){
     // a faire
 }
 
-void save_file(char* file, rio_t rio){
+void save_file(char* file, rio_t rio, int append){
     // file c'est le nom qu'on a envoye
     
     // get number of max_line
     char file_name[1000] = "./filesClient/";
     
     strcat(file_name, file);
-    int fd = open(file_name, O_WRONLY | O_CREAT, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH);
+    int fd;
+    if(append)
+        fd = open(file_name, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH);
+    else
+        fd = open(file_name, O_WRONLY | O_CREAT, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH);
 
     // if server sends OK, then save_file()
     int packet_size;
@@ -157,7 +166,6 @@ void save_file(char* file, rio_t rio){
     int octs_lis = Rio_readnb(&rio, &packet, packet_size);
     FILE* hiddenFile = NULL;
     int i=0;
-    printf("im here\n");
     while (octs_lis == MAXLINE) {
         sleep(1);
         printf("on lis %d octet\n", octs_lis);
@@ -169,6 +177,7 @@ void save_file(char* file, rio_t rio){
         Rio_readnb(&rio, &packet_size, 4);
         octs_lis = Rio_readnb(&rio, &packet, packet_size);
     } 
+    printf("on lis %d octet\n", octs_lis);
     Rio_writen(fd, packet, octs_lis);
     hiddenFile = fopen(".cache", "w");
     fprintf(hiddenFile, "succes");
