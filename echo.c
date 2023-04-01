@@ -89,9 +89,9 @@ void echo(int connfd){
 
         while((n = Rio_readnb(&fileRio, file_name, MAXLINE)) > 0){
 
-            // getchar();
             Rio_writen(connfd, &n, 4);
             Rio_writen(connfd, file_name, n);
+            // getchar();
         }
     }
 }

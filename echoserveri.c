@@ -63,6 +63,9 @@ int main(int argc, char **argv){
                 printf("server connected to %s (%s)\n", client_hostname,
                     client_ip_string);
                 echo(connfd);
+                printf("server deconnected to %s (%s)\n", client_hostname, client_ip_string);
+
+
                 Close(connfd);
                 exit(0);
             }

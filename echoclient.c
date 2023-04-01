@@ -3,7 +3,7 @@
  */
 #include "csapp.h"
 #include <string.h>
-
+#include "time.h"
 int file_available(int, rio_t, char*);
 void save_file(char*, rio_t, int);
 
@@ -36,22 +36,12 @@ paquet* getBeforeConnectInfo(){
     return p;
 }
 
-// void recupData(paquet* p, rio_t rio, char* res, int clientfd){
-//     Rio_writen(clientfd, p->nomFic, strlen(p->nomFic));
-//     int n;
-//     int fd = open(p->nomFic, O_WRONLY | O_CREAT, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH); 
-//     while ((n = Rio_readnb(&rio, res, MAXLINE)) > 0) {
-//         fprintf(stderr,"reconstitution paquet de %d bits recu!!\n", n);
-//         Rio_writen(fd, res, n);
-//     }
-//     Close(fd);
-
-// }
 
 int main(int argc, char **argv){
     int clientfd, port;
     char *host, buf[MAXLINE];
     rio_t rio;
+    FILE* file;
 
     if (argc != 2) {
         fprintf(stderr, "usage: %s <host>\n", argv[0]);
@@ -100,6 +90,8 @@ int main(int argc, char **argv){
     // tant que on n'as pas ecrit bye
     int bye = 0;
     while(!bye){ 
+        char file_name[1000] = "./filesClient/";
+
         // get command from input
         Fgets(buf, MAXLINE, stdin);
 
@@ -109,6 +101,22 @@ int main(int argc, char **argv){
             bye = 1;
             continue;
         }
+        
+        // change \n to end 0
+        int i = 0;
+        while (buf[i]!='\n')
+            i++;
+        buf[i] = 0;
+        
+        strcat(file_name, buf);
+        if((file = fopen(file_name, "r"))){
+            printf("file already saved\n");
+            printf("enter the next command\n");
+            continue;
+        }
+
+        buf[i] = '\n';
+        buf[i+1] = '\0';
 
         // send command to server
         if(!file_available(clientfd, rio, (char*)buf)){
@@ -117,9 +125,6 @@ int main(int argc, char **argv){
         };
 
         // change \n to end 0
-        int i = 0;
-        while (buf[i]!='\n')
-            i++;
         buf[i] = 0;
 
         save_file(buf, rio, 0);
@@ -150,7 +155,13 @@ void save_file(char* file, rio_t rio, int append){
     
     // get number of max_line
     char file_name[1000] = "./filesClient/";
-    
+    time_t start_t, end_t;
+    double kb_sec;
+    double diff_t;
+
+    time(&start_t);
+
+    int totalBytes;
     strcat(file_name, file);
     int fd;
     if(append)
@@ -173,12 +184,26 @@ void save_file(char* file, rio_t rio, int append){
         hiddenFile = fopen(".cache", "w");
         fprintf(hiddenFile, "%d\n%s", i, file);
         fclose(hiddenFile);
+        
         Rio_writen(fd, packet, octs_lis);
         Rio_readnb(&rio, &packet_size, 4);
         octs_lis = Rio_readnb(&rio, &packet, packet_size);
+        totalBytes += octs_lis;
     } 
-    printf("on lis %d octet\n", octs_lis);
+    // specific case: file multiple of MAXLINE
+    
+
+    // read what rests
+    printf("on list %d octet\n", octs_lis);
     Rio_writen(fd, packet, octs_lis);
+    totalBytes += octs_lis;
+    //
+    
+    time(&end_t);
+    diff_t = difftime(end_t, start_t);
+    kb_sec = (totalBytes/1000)/diff_t;
+    printf("\nTransfer successfully complete.\n");
+    printf("%d bytes received in %f seconds(%f Kbytes/s)\n\n", totalBytes, diff_t, kb_sec);
     hiddenFile = fopen(".cache", "w");
     fprintf(hiddenFile, "succes");
     fclose(hiddenFile);
