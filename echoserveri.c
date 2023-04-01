@@ -10,12 +10,40 @@
 #define NB_PROC 5
 #endif
 
+int Tpid[NB_PROC];
+
+void ajouter(int p){
+	int  i = 0;
+	while (Tpid[i] != -1)
+	{
+		i++;
+	}
+	Tpid[i] = p;
+}
+
+void init(){
+	for (int i = 0; i < NB_PROC; i++)
+	{
+		Tpid[i] = -1;
+	}
+}
+
 void echo(int connfd);
 
 void handlerQUIT(int sig){
-    waitpid(-1, NULL, WNOHANG);
+    int pid;
+    for (int i = 0; i < NB_PROC; i++)
+    {
+        if(Tpid[i] != -1){
+            pid = Tpid[i];
+            Kill(pid, SIGINT);
+            Tpid[i] = -1;
+            waitpid(pid, NULL, WNOHANG);
+        }
+    }
     return;
 }
+
 
 /* 
  * Note that this code only works with IPv4 addresses
@@ -23,6 +51,9 @@ void handlerQUIT(int sig){
  */
 int main(int argc, char **argv){
     Signal(SIGQUIT, handlerQUIT);
+    
+    /*on initialise le tableau du pool de processus*/
+    init();
 
     int listenfd, connfd, port;
     socklen_t clientlen;
@@ -41,10 +72,13 @@ int main(int argc, char **argv){
     listenfd = Open_listenfd(port);
 
     int dad = getpid();
-
+    int pid;
     for(int i = 0; i < NB_PROC ; i++){
-        if(getpid() == dad)
-            Fork();
+        if(getpid() == dad){
+            pid = Fork();
+            if(pid != 0)
+                ajouter(pid);
+        }
     }
     // idee pour le pool tab de process qui exec le Accept
     while (1) {
@@ -67,7 +101,6 @@ int main(int argc, char **argv){
 
 
                 Close(connfd);
-                exit(0);
             }
             else Close(connfd);
         }
