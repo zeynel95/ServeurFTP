@@ -17,8 +17,7 @@ void echo(int connfd){
     int DecalageLen;
     Rio_readnb(&rio, &DecalageLen, 4);
     // si il y a un fichier a recuperer
-    if (DecalageLen)
-    {
+    if (DecalageLen){
         printf("on reprend lecriture du fichier\n");
         n = Rio_readlineb(&rio, buf, MAXLINE);
         char file_name[1000] = "./filesServeur/";
@@ -59,7 +58,7 @@ void echo(int connfd){
     }
     
     /******************************/
-    
+    // while receiving messages from client
     while((n = Rio_readlineb(&rio, buf, MAXLINE)) > 0){
         char file_name[1000] = "./filesServeur/";
         printf("communication ready from server\n");
@@ -88,6 +87,7 @@ void echo(int connfd){
         rio_t fileRio;
         rio_readinitb(&fileRio, fd);
 
+        // send messages 2 by 2
         while((n = Rio_readnb(&fileRio, file_name, MAXLINE)) > 0){
 
             Rio_writen(connfd, &n, 4);

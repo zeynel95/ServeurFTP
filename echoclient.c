@@ -14,6 +14,7 @@ typedef struct paquet{
 } paquet;
 
 paquet* getBeforeConnectInfo(){
+    // returns if cache had a problem or not
     FILE* f = fopen(".cache","r");
 
     if(!f)
@@ -70,6 +71,7 @@ int main(int argc, char **argv){
     
     int decalageLen = 0;
     if(p){
+        // cache with problem
         printf("on reprend lecriture du fichier %s\n", p->nomFic);
         decalageLen = p->declage;
         Rio_writen(clientfd, &decalageLen, 4);
@@ -114,16 +116,19 @@ int main(int argc, char **argv){
             continue;
         }
 
+        // put the \n back on
         buf[i] = '\n';
         buf[i+1] = '\0';
 
         // send command to server
         if(!file_available(clientfd, rio, (char*)buf)){
             printf("file doesn't exist: buff: %s.\n", buf);
+            // next command
             continue;
         };
 
-        // change \n to end 0
+        // a little back and forth, inefficient coding and messy 
+        // remove the \n
         buf[i] = 0;
 
         save_file(buf, rio, 0, clientfd);
@@ -134,10 +139,10 @@ int main(int argc, char **argv){
 }
 
 int file_available(int clientfd, rio_t rio, char* buf){
-    // send command to server
-
+    // send name to server
     Rio_writen(clientfd, buf, strlen(buf));
     int is_OK;
+    // receive if file exists
     Rio_readnb(&rio, &is_OK, 4);
     if(is_OK == 1){
         // fichier existe
@@ -145,8 +150,6 @@ int file_available(int clientfd, rio_t rio, char* buf){
     }
 
     return 0; 
-
-    // a faire
 }
 
 void save_file(char* file, rio_t rio, int append, int clientfd){
@@ -163,7 +166,7 @@ void save_file(char* file, rio_t rio, int append, int clientfd){
     int totalBytes = 0;
     strcat(file_name, file);
     int fd;
-    if(append)
+    if(append) // append when we had a semi-downloaded file
         fd = open(file_name, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH);
     else
         fd = open(file_name, O_WRONLY | O_CREAT, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH);
@@ -174,13 +177,11 @@ void save_file(char* file, rio_t rio, int append, int clientfd){
     fprintf(hiddenFile, "%d\n%s", 0, file);
     fclose(hiddenFile);
 
-    // if server sends OK, then save_file()
     int packet_size, octs_lis=1;
     
     char *packet[MAXLINE];
     int i=0;
     int serverReponse = 1;
-    // while (octs_lis > 0 && packet_size > 0) {
     while (serverReponse) {
         // read packet_size
         Rio_readnb(&rio, &packet_size, 4);
@@ -197,11 +198,12 @@ void save_file(char* file, rio_t rio, int append, int clientfd){
             // correct terminaison
         }
 
+        // cache update
         hiddenFile = fopen(".cache", "w");
         fprintf(hiddenFile, "%d\n%s", i, file);
         fclose(hiddenFile);
 
-        // read octs_lis
+        // read bytes
         octs_lis = Rio_readnb(&rio, &packet, packet_size);
         sleep(1);
         if(octs_lis == 0){
