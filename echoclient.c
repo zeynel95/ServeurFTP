@@ -5,7 +5,7 @@
 #include <string.h>
 #include "time.h"
 int file_available(int, rio_t, char*);
-void save_file(char*, rio_t, int);
+void save_file(char*, rio_t, int, int);
 
 
 typedef struct paquet{
@@ -76,13 +76,12 @@ int main(int argc, char **argv){
         p->nomFic[strlen(p->nomFic)] = '\n';
         if(!file_available(clientfd, rio, p->nomFic)){
             printf("file doesn't exist: buff: %s.\n", buf);
-        }
-        else{
+        }else{
             int i = 0;
             while (p->nomFic[i]!='\n')
                 i++;
             p->nomFic[i] = 0;
-            save_file(p->nomFic, rio, 1);
+            save_file(p->nomFic, rio, 1, clientfd);
         } 
     }
     else Rio_writen(clientfd, &decalageLen, 4);
@@ -127,7 +126,7 @@ int main(int argc, char **argv){
         // change \n to end 0
         buf[i] = 0;
 
-        save_file(buf, rio, 0);
+        save_file(buf, rio, 0, clientfd);
     }
 
     Close(clientfd);
@@ -150,7 +149,7 @@ int file_available(int clientfd, rio_t rio, char* buf){
     // a faire
 }
 
-void save_file(char* file, rio_t rio, int append){
+void save_file(char* file, rio_t rio, int append, int clientfd){
     // file c'est le nom qu'on a envoye
     
     // get number of max_line
@@ -169,36 +168,56 @@ void save_file(char* file, rio_t rio, int append){
     else
         fd = open(file_name, O_WRONLY | O_CREAT, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH);
 
+    // start the cache in case server stops immediately
+    FILE* hiddenFile = NULL;
+    hiddenFile = fopen(".cache", "w");
+    fprintf(hiddenFile, "%d\n%s", 0, file);
+    fclose(hiddenFile);
+
     // if server sends OK, then save_file()
-    int packet_size, octs_lis;
-    Rio_readnb(&rio, &packet_size, 4);
+    int packet_size, octs_lis=1;
     
     char *packet[MAXLINE];
-    FILE* hiddenFile = NULL;
     int i=0;
-    while (packet_size > 0) {
-        octs_lis = Rio_readnb(&rio, &packet, packet_size);
-        sleep(1);
-        printf("on lis %d octet\n", octs_lis);
-        i++;
-        
+    int serverReponse = 1;
+    // while (octs_lis > 0 && packet_size > 0) {
+    while (serverReponse) {
+        // read packet_size
+        Rio_readnb(&rio, &packet_size, 4);
+        if(packet_size == 0){
+            // server crash
+            printf("server ended upbrubtly\n");
+            Close(fd);
+            Close(clientfd);
+            exit(0);
+        }else if(packet_size == -1){
+            serverReponse = 0;
+            continue;
+            // end of file
+            // correct terminaison
+        }
+
         hiddenFile = fopen(".cache", "w");
         fprintf(hiddenFile, "%d\n%s", i, file);
         fclose(hiddenFile);
+
+        // read octs_lis
+        octs_lis = Rio_readnb(&rio, &packet, packet_size);
+        sleep(1);
+        if(octs_lis == 0){
+            // server crash
+            serverReponse = 0;
+            printf("server ended upbrubtly\n");
+            Close(fd);
+            Close(clientfd);
+            exit(0);
+        }
+        printf("on lis %d octet\n", octs_lis);
+        i++;
         
         Rio_writen(fd, packet, octs_lis);
-        Rio_readnb(&rio, &packet_size, 4);
-        // printf("next packets_size: %d\n", packet_size);
-        // octs_lis = Rio_readnb(&rio, &packet, packet_size);
         totalBytes += octs_lis;
     } 
-    // if correct signal
-    if(packet_size != -1){
-        printf("server ended upbrubtly\n");
-        Close(fd);
-        return;
-    }
-
     
     time(&end_t);
     diff_t = difftime(end_t, start_t);

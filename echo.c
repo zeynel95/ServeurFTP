@@ -94,8 +94,9 @@ void echo(int connfd){
             Rio_writen(connfd, file_name, n);
             // getchar();
         }
-        // send the 0 as correct signal
+        // send the -1 as correct signal
         n = -1;
         Rio_writen(connfd, &n, 4);
+        printf("Success\n\n");
     }
 }
