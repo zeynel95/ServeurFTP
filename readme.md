@@ -47,3 +47,10 @@ If the client has no cache, or the cache sais sucess, than we send 0 to the serv
 the name of the file as usual. In case were we receive something different from 0, than it must be a number X. The server then 
 receives the name of the file semi-downloaded. It starts then to send 2 by 2 with the same protocol from before, the packages 
 only this time skipping X packages downloaded. 
+
+## Tests
+pour verifier la fonctionalite, on peut utiliser la commande
+diff ./filesServeur/connexion-turing.pdf ./filesClient/connexion-turing.pdf
+
+Dans la presentation on va Ctrl+C sur le server ou/et sur le client pour montrer le cache et on va utiliser diff pour 
+verifier que le fichier va bien telecharger.
