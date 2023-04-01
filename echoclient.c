@@ -111,7 +111,7 @@ int main(int argc, char **argv){
         strcat(file_name, buf);
         if((file = fopen(file_name, "r"))){
             printf("file already saved\n");
-            printf("enter the next command\n");
+            printf("enter the next command\n\n");
             continue;
         }
 
@@ -161,7 +161,7 @@ void save_file(char* file, rio_t rio, int append){
 
     time(&start_t);
 
-    int totalBytes;
+    int totalBytes = 0;
     strcat(file_name, file);
     int fd;
     if(append)
@@ -170,34 +170,35 @@ void save_file(char* file, rio_t rio, int append){
         fd = open(file_name, O_WRONLY | O_CREAT, S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH);
 
     // if server sends OK, then save_file()
-    int packet_size;
+    int packet_size, octs_lis;
     Rio_readnb(&rio, &packet_size, 4);
     
     char *packet[MAXLINE];
-    int octs_lis = Rio_readnb(&rio, &packet, packet_size);
     FILE* hiddenFile = NULL;
     int i=0;
-    while (octs_lis == MAXLINE) {
+    while (packet_size > 0) {
+        octs_lis = Rio_readnb(&rio, &packet, packet_size);
         sleep(1);
         printf("on lis %d octet\n", octs_lis);
         i++;
+        
         hiddenFile = fopen(".cache", "w");
         fprintf(hiddenFile, "%d\n%s", i, file);
         fclose(hiddenFile);
         
         Rio_writen(fd, packet, octs_lis);
         Rio_readnb(&rio, &packet_size, 4);
-        octs_lis = Rio_readnb(&rio, &packet, packet_size);
+        // printf("next packets_size: %d\n", packet_size);
+        // octs_lis = Rio_readnb(&rio, &packet, packet_size);
         totalBytes += octs_lis;
     } 
-    // specific case: file multiple of MAXLINE
-    
+    // if correct signal
+    if(packet_size != -1){
+        printf("server ended upbrubtly\n");
+        Close(fd);
+        return;
+    }
 
-    // read what rests
-    printf("on list %d octet\n", octs_lis);
-    Rio_writen(fd, packet, octs_lis);
-    totalBytes += octs_lis;
-    //
     
     time(&end_t);
     diff_t = difftime(end_t, start_t);

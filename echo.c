@@ -47,13 +47,14 @@ void echo(int connfd){
             rio_readinitb(&fileRio, fd);
             int i = 1;
             while((n = Rio_readnb(&fileRio, file_name, MAXLINE)) > 0){
-                if (i>DecalageLen)
-                {
+                if (i>DecalageLen){
                     Rio_writen(connfd, &n, 4);
                     Rio_writen(connfd, file_name, n);
                 }
                 i++;
             }
+            n = -1;
+            Rio_writen(connfd, &n, 4);
         }
     }
     
@@ -93,5 +94,8 @@ void echo(int connfd){
             Rio_writen(connfd, file_name, n);
             // getchar();
         }
+        // send the 0 as correct signal
+        n = -1;
+        Rio_writen(connfd, &n, 4);
     }
 }
